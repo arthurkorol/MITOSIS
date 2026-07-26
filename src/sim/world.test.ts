@@ -22,7 +22,7 @@ describe('питание', () => {
   it('съеденная зелень даёт энергию и событие ate', () => {
     const w = createWorld(7);
     w.food.length = 0;
-    w.food.push({ x: w.player.x, y: w.player.y, type: 0, seed: 0 });
+    w.food.push({ id: 0, x: w.player.x, y: w.player.y, type: 0, seed: 0 });
     stepWorld(w, stay(w), FIXED_DT);
     expect(w.player.energy).toBeCloseTo(
       PLAYER.energyStart + FOOD_DEFS[0].energy - PLAYER.metabolismPerSec * FIXED_DT,
@@ -35,7 +35,7 @@ describe('питание', () => {
   it('ДНК-сгусток даёт ДНК и событие dnaGain', () => {
     const w = createWorld(7);
     w.food.length = 0;
-    w.food.push({ x: w.player.x, y: w.player.y, type: 2, seed: 0 });
+    w.food.push({ id: 0, x: w.player.x, y: w.player.y, type: 2, seed: 0 });
     stepWorld(w, stay(w), FIXED_DT);
     expect(w.dna).toBe(FOOD_DEFS[2].dna);
     expect(w.events.some((e) => e.t === 'dnaGain')).toBe(true);
@@ -45,7 +45,7 @@ describe('питание', () => {
     const w = createWorld(7);
     w.food.length = 0;
     const startDist = w.player.radius + PLAYER.magnetExtra - 4;
-    w.food.push({ x: w.player.x + startDist, y: w.player.y, type: 0, seed: 0 });
+    w.food.push({ id: 0, x: w.player.x + startDist, y: w.player.y, type: 0, seed: 0 });
     stepWorld(w, stay(w), FIXED_DT);
     const f = w.food.find((f) => f.type === 0 && Math.abs(f.y - w.player.y) < 1);
     expect(f).toBeDefined();
