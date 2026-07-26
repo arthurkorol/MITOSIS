@@ -1,16 +1,17 @@
-import { Color, Entity, Plane, Ray, TONEMAP_ACES, Vec3, type Application } from 'playcanvas';
+import { Entity, Plane, Ray, TONEMAP_NEUTRAL, Vec3, type Application } from 'playcanvas';
 import { expDecay } from '../core/math';
 import { CAMERA } from '../data/balance';
+import { PALETTE } from './palette';
 import { sceneToSimX, sceneToSimY, simToSceneX, simToSceneZ } from './units';
 
-/** Наклон камеры: 16° от надира — параллакс и глубина без потери читаемости. */
-const PITCH_DEG = -74;
-const FOV_DEG = 45;
 /**
- * Дистанция до плоскости геймплея. 68 дало бы охват ≈ CAMERA.viewHeight px
- * как в 2D; берём ближе — существо и детали среды должны читаться.
+ * В Spore камера смотрит строго сверху, вид почти ортографический —
+ * лёгкий наклон оставлен только чтобы читалась толщина существ.
  */
-export const CAM_DIST = 54;
+const PITCH_DEG = -84;
+const FOV_DEG = 40;
+/** Дистанция до плоскости геймплея: существо занимает заметную долю экрана. */
+export const CAM_DIST = 30;
 
 export class FollowCamera {
   readonly rig = new Entity('CameraRig');
@@ -27,9 +28,10 @@ export class FollowCamera {
       fov: FOV_DEG,
       nearClip: 0.5,
       farClip: 400,
-      clearColor: new Color(0.016, 0.106, 0.149),
+      clearColor: PALETTE.fog,
     });
-    this.entity.camera!.toneMapping = TONEMAP_ACES;
+    // NEUTRAL сохраняет светлые тона воды; ACES их заметно притемнял.
+    this.entity.camera!.toneMapping = TONEMAP_NEUTRAL;
     const pitch = (-PITCH_DEG * Math.PI) / 180;
     this.entity.setLocalPosition(0, CAM_DIST * Math.sin(pitch), CAM_DIST * Math.cos(pitch));
     this.entity.setLocalEulerAngles(PITCH_DEG, 0, 0);

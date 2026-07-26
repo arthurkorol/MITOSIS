@@ -1,4 +1,4 @@
-import { CameraFrame, Layer, type Application } from 'playcanvas';
+import { CameraFrame, type Application } from 'playcanvas';
 import type { Cell } from '../sim/cell';
 import type { SimEvent, World } from '../sim/world';
 import { createPcApp } from './bootstrap';
@@ -7,68 +7,68 @@ import { CreatureView } from './creature';
 import { Environment } from './environment';
 import { FoodPool } from './food';
 import { FxSystem } from './fx';
-import { floorTexture, radialEmissiveTexture, radialTexture, shaftTexture } from './textures';
+import { PALETTE } from './palette';
+import {
+  bubbleTexture,
+  giantSilhouetteTexture,
+  radialTexture,
+  rippleTexture,
+  swirlTexture,
+  waterTexture,
+} from './textures';
+import { Trails } from './trails';
 
-/** Цвета вспышек поглощения по типу еды (RGB 0–255). */
-const ATE_COLORS = [
-  [140, 255, 170],
-  [255, 140, 100],
-  [255, 215, 90],
-] as const;
+/** Цвет вспышки по типу съеденного. */
+const ATE_COLORS = [PALETTE.plantFoodBright, PALETTE.meatFoodPink, PALETTE.dnaFood] as const;
 
-/**
- * Фасад 3D-сцены: PlayCanvas-приложение, слои, пост-эффекты и все визуальные
- * подсистемы. Потребляет World после шагов симуляции.
- */
+/** Фасад 3D-сцены: приложение, пост-эффекты и все визуальные подсистемы. */
 export class SceneView {
   readonly app: Application;
   private readonly camera: FollowCamera;
   private readonly creature: CreatureView;
   private readonly food: FoodPool;
   private readonly fx: FxSystem;
+  private readonly trails: Trails;
   private readonly env: Environment;
 
   constructor(canvas: HTMLCanvasElement) {
     const app = createPcApp(canvas);
     this.app = app;
 
-    // Слои: CellBack (задние полусферы мембран) до World-transparent, FX — после всего.
-    const comp = app.scene.layers;
-    const worldLayer = comp.getLayerByName('World')!;
-    const cellBack = new Layer({ name: 'CellBack' });
-    const fxLayer = new Layer({ name: 'FX' });
-    comp.insertTransparent(cellBack, comp.getTransparentIndex(worldLayer));
-    comp.pushTransparent(fxLayer);
-
     this.camera = new FollowCamera(app);
     const camComp = this.camera.entity.camera!;
-    camComp.layers = [...camComp.layers, cellBack.id, fxLayer.id];
 
     const device = app.graphicsDevice;
     const radial = radialTexture(device);
-    const textures = { floor: floorTexture(device), radial, shaft: shaftTexture(device) };
+    this.env = new Environment(app, this.camera.rig, {
+      water: waterTexture(device),
+      bubble: bubbleTexture(device),
+      radial,
+      giant: giantSilhouetteTexture(device),
+    });
 
-    this.env = new Environment(app, this.camera.rig, this.camera.entity, textures, fxLayer.id);
-
-    // Направление ключевого света — для псевдо-SSS мембраны.
-    const keyDir = app.root.findByName('KeyLight')!.forward;
-    this.creature = new CreatureView(app, cellBack.id, keyDir, radial);
+    this.creature = new CreatureView(app, radial);
     this.food = new FoodPool(app);
-    this.fx = new FxSystem(app, fxLayer.id, radialEmissiveTexture(device), this.camera.entity.getRotation());
+    this.trails = new Trails(app, swirlTexture(device), rippleTexture(device));
+    this.fx = new FxSystem(app, radial, this.camera.entity.getRotation());
 
-    // Пост-эффекты: bloom на эмиссивной еде, виньетка-«окуляр», DoF на плоскости геймплея.
+    // Пост-эффекты: главное — сильная глубина резкости (половина «объёма»
+    // в Spore); bloom едва заметен, обводок и жёстких свечений там нет.
     const frame = new CameraFrame(app, camComp);
-    frame.bloom.intensity = 0.02;
-    frame.bloom.blurLevel = 5;
-    frame.vignette.intensity = 0.6;
-    frame.vignette.inner = 0.5;
-    frame.vignette.outer = 1.0;
+    frame.bloom.intensity = 0.008;
+    frame.bloom.blurLevel = 6;
+    frame.vignette.intensity = 0.35;
+    frame.vignette.inner = 0.6;
+    frame.vignette.outer = 1.3;
     frame.vignette.curvature = 0.5;
     frame.dof.enabled = true;
     frame.dof.focusDistance = CAM_DIST;
-    frame.dof.focusRange = 30;
-    frame.dof.blurRadius = 3;
+    frame.dof.focusRange = 5;
+    frame.dof.blurRadius = 5;
     frame.dof.nearBlur = true;
+    frame.grading.enabled = true;
+    frame.grading.saturation = 1.12;
+    frame.grading.brightness = 1.04;
     frame.update();
 
     app.start();
@@ -82,7 +82,6 @@ export class SceneView {
     return this.camera.screenToSim(sx, sy, out);
   }
 
-  /** Синхронизация после сим-шагов кадра. renderX/renderY — интерполированная позиция игрока. */
   syncFromWorld(
     world: World,
     renderX: number,
@@ -94,14 +93,17 @@ export class SceneView {
     for (const e of events) {
       if (e.t === 'ate') {
         this.fx.burst(e.x, e.y, ATE_COLORS[e.food]);
+        this.trails.ripple(e.x, e.y, 2.2);
         this.creature.poke();
       } else if (e.t === 'dnaGain') {
-        this.fx.burst(e.x, e.y, ATE_COLORS[2]);
+        this.fx.burst(e.x, e.y, PALETTE.dnaFood);
       }
     }
 
     const p = world.player;
     this.creature.update(renderX, renderY, p.vx, p.vy, p.radius, dt, time);
+    this.trails.emit(renderX, renderY, p.vx, p.vy, p.radius, dt);
+    this.trails.update(dt);
     this.food.sync(world.food, time);
     this.fx.update(dt);
     this.camera.follow(renderX, renderY, dt);

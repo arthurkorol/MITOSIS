@@ -67,8 +67,9 @@ vec3 getWorldPosition() {
 }
 
 /**
- * Мембрана: 3 октавы value noise с разными скоростями/направлениями —
- * оболочка «переливается», а не дышит синхронно. uPulse — всплеск при поедании.
+ * Тело существа: мягкая «живость» поверхности — две октавы value noise
+ * с разными скоростями. Амплитуда намеренно небольшая: тело в Spore гладкое
+ * и глянцевое, а не бурлящее. uPulse — всплеск при поедании.
  */
 export const MEMBRANE_TRANSFORM_VS = transformChunk(
   /* glsl */ `
@@ -76,33 +77,15 @@ uniform float uTime;
 uniform float uPulse;
 ${VALUE_NOISE}
 float membraneDisp(vec3 p) {
-  float d = 0.06  * mvNoise(p * 1.7 + vec3(0.0, uTime * 0.35, 0.0))
-          + 0.03  * mvNoise(p * 3.4 + vec3(uTime * 0.6))
-          + 0.015 * mvNoise(p * 6.8 - vec3(uTime));
-  return d * (1.0 + 0.9 * uPulse);
+  float d = 0.030 * mvNoise(p * 1.6 + vec3(0.0, uTime * 0.3, 0.0))
+          + 0.014 * mvNoise(p * 3.2 + vec3(uTime * 0.55));
+  return d * (1.0 + 1.6 * uPulse);
 }
 `,
   /* glsl */ `
   localPos += normalize(localPos) * membraneDisp(localPos);
 `,
 );
-
-/**
- * Фазовый контраст «микроскопа» + псевдо-SSS: переопределение emissivePS.
- * dVertexNormalW и dViewDirW уже вычислены до evaluateFrontend (litForwardMain).
- */
-export const MEMBRANE_EMISSIVE_PS = /* glsl */ `
-uniform vec3 material_emissive;
-uniform float material_emissiveIntensity;
-uniform vec3 uKeyDir;
-void getEmission() {
-  dEmission = material_emissive * material_emissiveIntensity;
-  float fres = pow(1.0 - clamp(dot(dVertexNormalW, dViewDirW), 0.0, 1.0), 2.5);
-  dEmission += vec3(0.35, 0.55, 0.65) * fres;
-  float back = pow(clamp(dot(-dViewDirW, uKeyDir), 0.0, 1.0), 3.0);
-  dEmission += vec3(0.10, 0.22, 0.26) * back;
-}
-`;
 
 /**
  * Жгутики: бегущая волна по ленте. В vertex_position.w упакованы

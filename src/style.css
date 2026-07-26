@@ -8,7 +8,7 @@ html,
 body {
   height: 100%;
   overflow: hidden;
-  background: #03161e;
+  background: #63c6d9;
 }
 
 #game {
@@ -22,75 +22,130 @@ body {
   user-select: none;
 }
 
-/* Эффект микроскопа: мягкая виньетка поверх игры, не ловит указатель. */
+/* Микроскоп: мягкое затемнение к углам — светлое, чтобы не гасить воду. */
 #vignette {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 52%, rgba(2, 10, 14, 0.6) 100%);
+  background: radial-gradient(ellipse at center, transparent 58%, rgba(20, 76, 100, 0.32) 100%);
 }
 
+/* HUD — тёмное сине-стальное стекло узкой полосой по нижней кромке. */
 #hud {
   position: fixed;
-  top: max(12px, env(safe-area-inset-top));
-  left: max(12px, env(safe-area-inset-left));
-  right: max(12px, env(safe-area-inset-right));
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   pointer-events: none;
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  padding: 0 max(10px, env(safe-area-inset-left)) max(10px, env(safe-area-inset-bottom));
 }
 
-.bars {
+.bar-strip {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: min(320px, 42vw);
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(24, 60, 94, 0.92), rgba(8, 26, 46, 0.94));
+  border: 1px solid rgba(143, 184, 216, 0.55);
+  box-shadow:
+    0 2px 14px rgba(4, 20, 34, 0.45),
+    inset 0 1px 0 rgba(190, 226, 245, 0.25);
 }
 
-.bar {
-  height: 12px;
+.dna-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.4);
+  background: rgba(6, 20, 34, 0.75);
+  border: 1px solid rgba(143, 184, 216, 0.35);
+  color: #7ce85a;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  min-width: 66px;
+  justify-content: center;
+}
+
+.dna-icon {
+  filter: saturate(1.4);
+}
+
+/* Прогресс стадии: сегментированная зелёная заливка с метками-вехами. */
+.progress {
+  position: relative;
+  flex: 1;
+  height: 14px;
+  border-radius: 4px;
+  background: rgba(6, 22, 40, 0.85);
+  border: 1px solid rgba(143, 184, 216, 0.3);
   overflow: hidden;
 }
 
-.bar .fill {
+.progress-fill {
   height: 100%;
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform 200ms linear;
+  background-color: #4cd41a;
+  background-image: repeating-linear-gradient(
+    115deg,
+    rgba(255, 255, 255, 0.25) 0 6px,
+    rgba(255, 255, 255, 0) 6px 12px
+  );
+  box-shadow: 0 0 10px rgba(76, 212, 26, 0.55);
+}
+
+.tick {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background: rgba(190, 226, 245, 0.6);
+}
+
+.vitals {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: min(150px, 22vw);
+}
+
+.vital {
+  height: 8px;
   border-radius: 999px;
+  background: rgba(6, 22, 40, 0.85);
+  border: 1px solid rgba(143, 184, 216, 0.3);
+  overflow: hidden;
+}
+
+.vital-fill {
+  height: 100%;
   transform-origin: left center;
   transform: scaleX(1);
   transition: transform 120ms linear;
 }
 
-.bar.hp .fill {
-  background: linear-gradient(90deg, #ff5566, #ff8899);
-  box-shadow: 0 0 10px rgba(255, 85, 102, 0.7);
+.health .vital-fill {
+  background: linear-gradient(90deg, #5ce03c, #a6f57a);
 }
 
-.bar.energy .fill {
+.energy .vital-fill {
   background: linear-gradient(90deg, #ffc24d, #ffe08a);
-  box-shadow: 0 0 10px rgba(255, 194, 77, 0.7);
-}
-
-.dna {
-  margin-left: auto;
-  color: #ffd75e;
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.2;
-  text-shadow: 0 0 8px rgba(255, 215, 94, 0.8);
 }
 
 #debug {
   position: fixed;
-  bottom: 8px;
+  top: 8px;
   left: 8px;
-  color: #9fd9c8;
+  color: #06303f;
   font: 12px/1.5 ui-monospace, monospace;
-  opacity: 0.85;
+  background: rgba(255, 255, 255, 0.45);
+  padding: 4px 8px;
+  border-radius: 6px;
   pointer-events: none;
   white-space: pre;
 }
