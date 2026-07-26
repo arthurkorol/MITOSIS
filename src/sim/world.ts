@@ -5,6 +5,8 @@ import { createPlayerCell, type Cell } from './cell';
 import { fillInitialFood, updateFoodSpawner } from './spawner';
 
 export interface Food {
+  /** Монотонный id — стабильный ключ для пула визуальных сущностей. */
+  id: number;
   x: number;
   y: number;
   type: FoodType;
@@ -27,6 +29,8 @@ export interface World {
   rng: Rng;
   player: Cell;
   food: Food[];
+  /** Счётчик для Food.id. */
+  foodSeq: number;
   /** События последнего тика; потребитель читает после stepWorld. */
   events: SimEvent[];
   dna: number;
@@ -39,6 +43,7 @@ export function createWorld(seed: number): World {
     rng: createRng(seed),
     player: createPlayerCell(1, center, center),
     food: [],
+    foodSeq: 0,
     events: [],
     dna: 0,
   };

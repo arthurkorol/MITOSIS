@@ -55,7 +55,7 @@ function spawnFood(world: World, type: FoodType, rMin: number, rMax: number): vo
     const x = p.x + Math.cos(angle) * r;
     const y = p.y + Math.sin(angle) * r;
     if (x < 0 || x > WORLD.size || y < 0 || y > WORLD.size) continue;
-    world.food.push({ x, y, type, seed: world.rng.range(0, TAU) });
+    world.food.push({ id: world.foodSeq++, x, y, type, seed: world.rng.range(0, TAU) });
     return;
   }
   // В самом углу мира допустимого сектора может не найтись — пропускаем, доспавним позже.
