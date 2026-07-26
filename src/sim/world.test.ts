@@ -89,7 +89,7 @@ describe('движение', () => {
     const target = { aimX: startX + 300, aimY: w.player.y };
     run(w, 240, () => target);
     expect(w.player.x).toBeGreaterThan(startX + 250);
-    expect(Math.abs(w.player.x - target.aimX)).toBeLessThan(PLAYER.arriveRadius);
+    expect(Math.abs(w.player.x - target.aimX)).toBeLessThan(PLAYER.deadZone + 1);
   });
 
   it('край мира не выпускает клетку', () => {

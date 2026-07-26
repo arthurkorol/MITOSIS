@@ -1,4 +1,4 @@
-import { clamp, dist2 } from '../core/math';
+import { dist2 } from '../core/math';
 import { FOOD_SPAWN, WORLD, type FoodType } from '../data/balance';
 import { removeFood, type World } from './world';
 
@@ -47,12 +47,16 @@ export function updateFoodSpawner(world: World): void {
 
 function spawnFood(world: World, type: FoodType, rMin: number, rMax: number): void {
   const p = world.player;
-  const angle = world.rng.range(0, TAU);
-  const r = world.rng.range(rMin, rMax);
-  world.food.push({
-    x: clamp(p.x + Math.cos(angle) * r, 0, WORLD.size),
-    y: clamp(p.y + Math.sin(angle) * r, 0, WORLD.size),
-    type,
-    seed: world.rng.range(0, TAU),
-  });
+  // Точки вне мира перевыбираем, а не клампим: кламп схлопывал кольцо у границы,
+  // и еда материализовалась в кадре и прямо под клеткой игрока.
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const angle = world.rng.range(0, TAU);
+    const r = world.rng.range(rMin, rMax);
+    const x = p.x + Math.cos(angle) * r;
+    const y = p.y + Math.sin(angle) * r;
+    if (x < 0 || x > WORLD.size || y < 0 || y > WORLD.size) continue;
+    world.food.push({ x, y, type, seed: world.rng.range(0, TAU) });
+    return;
+  }
+  // В самом углу мира допустимого сектора может не найтись — пропускаем, доспавним позже.
 }

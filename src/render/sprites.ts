@@ -4,17 +4,23 @@ const FOOD_COLORS = ['#66ff99', '#ee4444', '#ffcc00'] as const;
 
 /**
  * Пре-рендеренные спрайты еды с мягким свечением — градиенты считаются
- * один раз при старте, в кадре только drawImage.
+ * при старте и ресайзе, в кадре только drawImage.
+ *
+ * pixelScale = dpr × масштаб камеры: спрайт запекается в физических пикселях,
+ * иначе на retina-экранах еда мылится рядом с векторной клеткой игрока.
  */
-export function makeFoodSprites(): HTMLCanvasElement[] {
+export function makeFoodSprites(pixelScale: number): HTMLCanvasElement[] {
   return FOOD_DEFS.map((def, i) => {
     const glow = def.radius * 3;
-    const size = Math.ceil(glow) * 2;
+    // Запас ×1.35 — белковая капля растянута по X в 1.3 раза, глоу не должен резаться.
+    const half = glow * 1.35;
+    const size = Math.max(2, Math.ceil(half * pixelScale) * 2);
     const c = document.createElement('canvas');
     c.width = size;
     c.height = size;
     const ctx = c.getContext('2d')!;
-    const cx = size / 2;
+    ctx.scale(pixelScale, pixelScale);
+    const cx = size / (2 * pixelScale);
 
     const g = ctx.createRadialGradient(cx, cx, 0, cx, cx, glow);
     g.addColorStop(0, FOOD_COLORS[i as 0 | 1 | 2]);

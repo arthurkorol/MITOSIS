@@ -1,4 +1,5 @@
 import type { Camera } from '../camera';
+import { CAMERA } from '../data/balance';
 import type { World } from '../sim/world';
 import { Background } from './background';
 import type { Effects } from './effects';
@@ -9,7 +10,8 @@ const TAU = Math.PI * 2;
 export class Renderer {
   private readonly ctx: CanvasRenderingContext2D;
   private readonly bg = new Background();
-  private readonly foodSprites = makeFoodSprites();
+  private foodSprites = makeFoodSprites(1);
+  private spriteScale = 1;
   private cssW = 1;
   private cssH = 1;
   private dpr = 1;
@@ -25,6 +27,9 @@ export class Renderer {
     this.canvas.width = Math.max(1, Math.round(cssW * dpr));
     this.canvas.height = Math.max(1, Math.round(cssH * dpr));
     this.bg.resize(cssW, cssH);
+    // Перезапекаем спрайты под фактическую плотность пикселей.
+    this.spriteScale = dpr * (cssH / CAMERA.viewHeight);
+    this.foodSprites = makeFoodSprites(this.spriteScale);
   }
 
   draw(world: World, cam: Camera, time: number, effects: Effects): void {
@@ -58,7 +63,8 @@ export class Renderer {
       const by = f.y + Math.cos(time * 1.3 + f.seed * 1.7) * 2;
       // ДНК-сгустки пульсируют с частотой 2 Гц.
       const scale = f.type === 2 ? 1 + 0.15 * Math.sin(TAU * 2 * time + f.seed) : 1;
-      const w = sprite.width * scale;
+      // Спрайт запечён в физических пикселях — возвращаем в мировые единицы.
+      const w = (sprite.width / this.spriteScale) * scale;
       ctx.drawImage(sprite, bx - w / 2, by - w / 2, w, w);
     }
   }

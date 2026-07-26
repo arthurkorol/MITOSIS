@@ -6,8 +6,10 @@ const hudRoot = document.getElementById('hud') as HTMLElement;
 const debugEl = document.getElementById('debug');
 
 const params = new URLSearchParams(location.search);
-const seedParam = params.get('seed');
-const seed = seedParam !== null ? Number(seedParam) >>> 0 : Date.now() >>> 0;
+const parsedSeed = Number(params.get('seed'));
+const seed = Number.isFinite(parsedSeed) && params.get('seed') !== null
+  ? parsedSeed >>> 0
+  : Date.now() >>> 0;
 
 const app = new App(canvas, hudRoot, params.has('debug') ? debugEl : null, seed);
 

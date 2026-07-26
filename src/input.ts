@@ -16,6 +16,8 @@ export class Input {
   }
 
   private readonly onPointer = (e: PointerEvent): void => {
+    // Только первичный указатель: второй палец на телефоне не должен дёргать прицел.
+    if (!e.isPrimary) return;
     this.pointerX = e.clientX;
     this.pointerY = e.clientY;
     this.pointerActive = true;
