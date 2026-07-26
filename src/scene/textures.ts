@@ -152,6 +152,118 @@ export function waterTexture(device: GraphicsDevice): Texture {
   });
 }
 
+/**
+ * Кожа существа: пупырышки и кольца-везикулы поверх основного тона.
+ * Голая заливка читается пластиковой — в Spore тела всегда фактурные.
+ */
+export function skinTexture(device: GraphicsDevice, base: string, accent: string): Texture {
+  return canvasTexture(device, 512, (ctx, s) => {
+    const rng = createRng(0x5c17);
+    ctx.fillStyle = base;
+    ctx.fillRect(0, 0, s, s);
+    // Тёмные полосы вдоль тела — лёгкие, чтобы не гасить леденцовый тон.
+    ctx.globalAlpha = 0.1;
+    ctx.fillStyle = accent;
+    for (let i = 0; i < 4; i++) {
+      const y = rng.range(0, s);
+      ctx.fillRect(0, y, s, rng.range(5, 14));
+    }
+    ctx.globalAlpha = 1;
+    // Пупырышки с бликом — «живая» кожа.
+    for (let i = 0; i < 260; i++) {
+      const x = rng.range(0, s);
+      const y = rng.range(0, s);
+      const r = rng.range(3, 11);
+      const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 0, x, y, r);
+      g.addColorStop(0, 'rgba(255,255,255,0.55)');
+      g.addColorStop(0.55, 'rgba(255,255,255,0.1)');
+      g.addColorStop(1, 'rgba(0,0,0,0.12)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Кольца-везикулы.
+    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+    for (let i = 0; i < 26; i++) {
+      ctx.lineWidth = rng.range(1.5, 3.5);
+      ctx.beginPath();
+      ctx.arc(rng.range(0, s), rng.range(0, s), rng.range(8, 30), 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  });
+}
+
+/** Детрит: фораминиферы-розетки и спиральные ракушки, плавающие в воде. */
+export function detritusTexture(device: GraphicsDevice, kind: 'rosette' | 'shell'): Texture {
+  return canvasTexture(device, 128, (ctx, s) => {
+    ctx.clearRect(0, 0, s, s);
+    const c = s / 2;
+    if (kind === 'rosette') {
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.beginPath();
+      ctx.arc(c, c, s * 0.16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+      ctx.lineWidth = s * 0.022;
+      ctx.lineCap = 'round';
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(c + Math.cos(a) * s * 0.15, c + Math.sin(a) * s * 0.15);
+        ctx.lineTo(c + Math.cos(a) * s * 0.44, c + Math.sin(a) * s * 0.44);
+        ctx.stroke();
+      }
+    } else {
+      // Спираль-улитка.
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+      ctx.lineWidth = s * 0.055;
+      ctx.beginPath();
+      for (let t = 0; t < 60; t++) {
+        const a = (t / 60) * Math.PI * 4;
+        const r = s * 0.05 + (t / 60) * s * 0.38;
+        const x = c + Math.cos(a) * r;
+        const y = c + Math.sin(a) * r;
+        if (t === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+  });
+}
+
+/** Заросли водорослей: ветвистая розетка с бульбочками на концах. */
+export function algaeTexture(device: GraphicsDevice, size = 256): Texture {
+  return canvasTexture(device, size, (ctx, s) => {
+    ctx.clearRect(0, 0, s, s);
+    const rng = createRng(0xa16a);
+    const c = s / 2;
+    ctx.lineCap = 'round';
+    for (let b = 0; b < 9; b++) {
+      const a = (b / 9) * Math.PI * 2 + rng.range(-0.2, 0.2);
+      const len = s * rng.range(0.24, 0.44);
+      const ex = c + Math.cos(a) * len;
+      const ey = c + Math.sin(a) * len;
+      ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+      ctx.lineWidth = s * 0.028;
+      ctx.beginPath();
+      ctx.moveTo(c, c);
+      ctx.quadraticCurveTo(
+        c + Math.cos(a + 0.5) * len * 0.6,
+        c + Math.sin(a + 0.5) * len * 0.6,
+        ex,
+        ey,
+      );
+      ctx.stroke();
+      // Бульбочка на конце ветки.
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.beginPath();
+      ctx.arc(ex, ey, s * rng.range(0.028, 0.05), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
 /** Размытый силуэт гиганта в глубине — «murky visions of larger animals». */
 export function giantSilhouetteTexture(device: GraphicsDevice, size = 512): Texture {
   return canvasTexture(device, size, (ctx, s) => {

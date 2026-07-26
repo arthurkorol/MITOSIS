@@ -53,11 +53,20 @@ const GIANT_CELL = 52;
 
 export class Environment {
   private readonly giants: Entity[] = [];
+  private readonly murk: Entity[] = [];
 
   constructor(
     app: Application,
     rig: Entity,
-    tex: { water: Texture; bubble: Texture; radial: Texture; giant: Texture },
+    tex: {
+      water: Texture;
+      bubble: Texture;
+      radial: Texture;
+      giant: Texture;
+      rosette: Texture;
+      shell: Texture;
+      algae: Texture;
+    },
   ) {
     const scene = app.scene;
     // Светлая сцена: ambient несёт основную заливку, свет лишь лепит объём.
@@ -102,6 +111,59 @@ export class Environment {
     water.setPosition(0, WATER_Y, 0);
     app.root.addChild(water);
 
+    // Облака мути у плоскости геймплея: подложка мира растянута на 400 юнитов
+    // и вблизи читается однотонной — мраморность даёт этот слой.
+    const murkRng = createRng(0x3ac1);
+    for (let i = 0; i < 26; i++) {
+      const mat = new StandardMaterial();
+      const lighter = i % 2 === 0;
+      mat.diffuse = lighter ? PALETTE.waterLight : PALETTE.waterDeep;
+      mat.useLighting = false;
+      mat.opacityMap = tex.radial;
+      mat.opacity = lighter ? 0.3 : 0.22;
+      mat.blendType = BLEND_NORMAL;
+      mat.depthWrite = false;
+      mat.update();
+      const m = new Entity('Murk');
+      m.addComponent('render', { type: 'plane' });
+      m.render!.material = mat;
+      const size = murkRng.range(14, 46);
+      m.setLocalScale(size, 1, size * murkRng.range(0.6, 1));
+      m.setPosition(
+        murkRng.range(-worldUnits / 2, worldUnits / 2),
+        -4 - murkRng.range(0, 3),
+        murkRng.range(-worldUnits / 2, worldUnits / 2),
+      );
+      m.setEulerAngles(0, murkRng.range(0, 360), 0);
+      app.root.addChild(m);
+      this.murk.push(m);
+    }
+
+    // Заросли водорослей в глубине: ярко-салатовые, уходят в размытие.
+    const algaeRng = createRng(0x41ae);
+    const algaeMat = new StandardMaterial();
+    algaeMat.diffuse = new Color(0.42, 0.78, 0.16);
+    algaeMat.useLighting = false;
+    algaeMat.opacityMap = tex.algae;
+    algaeMat.opacity = 0.5;
+    algaeMat.blendType = BLEND_NORMAL;
+    algaeMat.depthWrite = false;
+    algaeMat.update();
+    for (let i = 0; i < 34; i++) {
+      const a = new Entity('Algae');
+      a.addComponent('render', { type: 'plane' });
+      a.render!.material = algaeMat;
+      const size = algaeRng.range(6, 17);
+      a.setLocalScale(size, 1, size);
+      a.setPosition(
+        algaeRng.range(-worldUnits / 2, worldUnits / 2),
+        -7.5 - algaeRng.range(0, 2),
+        algaeRng.range(-worldUnits / 2, worldUnits / 2),
+      );
+      a.setEulerAngles(0, algaeRng.range(0, 360), 0);
+      app.root.addChild(a);
+    }
+
     // Размытые силуэты гигантов в глубине — «murky visions of larger animals».
     const rng = createRng(0x91a7);
     for (let i = 0; i < GIANT_COUNT; i++) {
@@ -126,6 +188,22 @@ export class Environment {
     // Пузыри и marine snow дрейфуют вместе с ригом камеры.
     for (const layer of BUBBLES) this.addDrift(rig, layer, tex.bubble, 1, 0.55);
     this.addDrift(rig, SNOW, tex.radial, 0.9, 1);
+
+    // Детрит: фораминиферы-розетки и ракушки — «мусор» живой воды.
+    this.addDrift(
+      rig,
+      { y: -1.2, spanY: 2, count: 14, sizeMin: 0.35, sizeMax: 0.8, alpha: 0.55 },
+      tex.rosette,
+      0.95,
+      0.2,
+    );
+    this.addDrift(
+      rig,
+      { y: -3.5, spanY: 2, count: 10, sizeMin: 0.5, sizeMax: 1.1, alpha: 0.4 },
+      tex.shell,
+      0.88,
+      0.15,
+    );
   }
 
   private addDrift(
@@ -174,6 +252,11 @@ export class Environment {
 
   /** Раскладывает силуэты по детерминированной сетке вокруг игрока. */
   update(time: number, playerX: number, playerZ: number): void {
+    // Муть медленно ползёт — вода не выглядит застывшей.
+    for (let i = 0; i < this.murk.length; i++) {
+      this.murk[i]!.rotateLocal(0, (i % 2 === 0 ? 1 : -1) * 0.6 * 0.016, 0);
+    }
+
     const baseCx = Math.floor(playerX / GIANT_CELL);
     const baseCz = Math.floor(playerZ / GIANT_CELL);
     for (let i = 0; i < this.giants.length; i++) {

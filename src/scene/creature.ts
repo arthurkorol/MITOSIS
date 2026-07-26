@@ -30,6 +30,7 @@ const FLAG_SEGMENTS = 20;
  */
 export class CreatureView {
   readonly root = new Entity('Player');
+  private readonly skin: Texture;
 
   private readonly bodyMat: StandardMaterial;
   private readonly flagellaMat: StandardMaterial;
@@ -42,8 +43,9 @@ export class CreatureView {
   private roll = 0;
   private pulse = 0;
 
-  constructor(app: Application, radialTex: Texture) {
+  constructor(app: Application, radialTex: Texture, skinTex: Texture) {
     const device = app.graphicsDevice;
+    this.skin = skinTex;
     const sphere = Mesh.fromGeometry(
       device,
       new SphereGeometry({ radius: 1, latitudeBands: 28, longitudeBands: 40 }),
@@ -51,10 +53,13 @@ export class CreatureView {
 
     // Тело: непрозрачное леденцовое, глянцевое, с лёгкой шумовой «живостью».
     this.bodyMat = new StandardMaterial();
-    this.bodyMat.diffuse = PALETTE.playerBody;
+    // Цвет тела живёт в текстуре кожи; diffuse держим белым, иначе тон
+    // умножается на себя и леденцовый оранжевый уходит в тёмно-бурый.
+    this.bodyMat.diffuse = new Color(1, 1, 1);
+    this.bodyMat.diffuseMap = this.skin;
     // Лёгкий самосвет не даёт спине уходить в тень при виде сверху.
     this.bodyMat.emissive = PALETTE.playerBody;
-    this.bodyMat.emissiveIntensity = 0.22;
+    this.bodyMat.emissiveIntensity = 0.18;
     this.bodyMat.specular = new Color(1, 0.95, 0.85);
     this.bodyMat.gloss = 0.82;
     this.bodyMat.useMetalness = false;
@@ -83,9 +88,11 @@ export class CreatureView {
     ] as const) {
       jaw.addComponent('render', { type: 'cone' });
       jaw.render!.material = boneMat;
-      jaw.setLocalScale(0.3, 0.42, 0.3);
-      jaw.setLocalPosition(side * 0.24, 0.02, -1.05);
-      jaw.setLocalEulerAngles(-108, 0, side * 16);
+      jaw.setLocalScale(0.42, 0.62, 0.42);
+      // Тело простирается по Z до 1.15 — жвалы обязаны выйти за его край.
+      jaw.setLocalPosition(side * 0.3, 0.02, -1.5);
+      // Остриё смотрит строго вперёд (−Z), клешни слегка разведены.
+      jaw.setLocalEulerAngles(-90, 0, side * 20);
       this.root.addChild(jaw);
     }
 
@@ -235,9 +242,9 @@ export class CreatureView {
     this.flagellaMat.setParameter('uSpeed', speed01);
 
     // Жвалы щёлкают при поедании, глаза покачиваются на стебельках.
-    const bite = this.pulse * 22;
-    this.jawL.setLocalEulerAngles(-108, 0, 16 + bite);
-    this.jawR.setLocalEulerAngles(-108, 0, -16 - bite);
+    const bite = this.pulse * 24;
+    this.jawL.setLocalEulerAngles(-90, 0, 20 + bite);
+    this.jawR.setLocalEulerAngles(-90, 0, -20 - bite);
     for (let i = 0; i < this.eyes.length; i++) {
       const wobble = Math.sin(time * 2.3 + i * 2.1) * 4 + speed01 * 6;
       this.eyes[i]!.setLocalEulerAngles(wobble, 0, 0);
@@ -258,8 +265,9 @@ function buildCiliaMesh(app: Application): Mesh {
 
   for (let c = 0; c < CILIA_COUNT; c++) {
     const a = (c / CILIA_COUNT) * Math.PI * 2;
-    const ox = Math.sin(a) * 0.74;
-    const oz = Math.cos(a) * 1.02;
+    // Стартуют на самой кромке тела (полуоси 0.78 × 1.15), иначе прячутся внутри.
+    const ox = Math.sin(a) * 0.8;
+    const oz = Math.cos(a) * 1.17;
     const outX = Math.sin(a);
     const outZ = Math.cos(a);
     const sideX = outZ;
@@ -267,8 +275,8 @@ function buildCiliaMesh(app: Application): Mesh {
     const base = positions.length / 4;
     for (let j = 0; j <= SEG; j++) {
       const s = j / SEG;
-      const len = 0.44 * s;
-      const half = (0.075 * (1 - s) + 0.012 * s) / 2;
+      const len = 0.5 * s;
+      const half = (0.11 * (1 - s) + 0.02 * s) / 2;
       const cx = ox + outX * len;
       const cz = oz + outZ * len;
       const w = (c % FLAG_RIBBONS) + s * 0.98;
@@ -308,7 +316,8 @@ function buildFlagellaMesh(app: Application): Mesh {
     const base = positions.length / 4;
     for (let j = 0; j <= FLAG_SEGMENTS; j++) {
       const s = j / FLAG_SEGMENTS;
-      const len = 1.0 + 2.1 * s;
+      // Корень — за кормой тела (Z до 1.15), иначе жгутик не виден.
+      const len = 1.2 + 2.2 * s;
       const half = (0.3 * (1 - s) + 0.06 * s) / 2;
       const cx = dirX * len;
       const cz = dirZ * len;

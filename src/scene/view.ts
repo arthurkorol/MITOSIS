@@ -9,10 +9,13 @@ import { FoodPool } from './food';
 import { FxSystem } from './fx';
 import { PALETTE } from './palette';
 import {
+  algaeTexture,
   bubbleTexture,
+  detritusTexture,
   giantSilhouetteTexture,
   radialTexture,
   rippleTexture,
+  skinTexture,
   swirlTexture,
   waterTexture,
 } from './textures';
@@ -45,9 +48,12 @@ export class SceneView {
       bubble: bubbleTexture(device),
       radial,
       giant: giantSilhouetteTexture(device),
+      rosette: detritusTexture(device, 'rosette'),
+      shell: detritusTexture(device, 'shell'),
+      algae: algaeTexture(device),
     });
 
-    this.creature = new CreatureView(app, radial);
+    this.creature = new CreatureView(app, radial, skinTexture(device, '#f0781f', '#8a3208'));
     this.food = new FoodPool(app);
     this.trails = new Trails(app, swirlTexture(device), rippleTexture(device));
     this.fx = new FxSystem(app, radial, this.camera.entity.getRotation());

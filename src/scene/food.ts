@@ -14,7 +14,7 @@ const TAU = Math.PI * 2;
 const STYLE = [
   { color: PALETTE.plantFood, emissive: 0.35, gloss: 0.75 },
   { color: PALETTE.meatFood, emissive: 0.28, gloss: 0.65 },
-  { color: PALETTE.dnaFood, emissive: 0.9, gloss: 0.85 },
+  { color: PALETTE.dnaFood, emissive: 0.55, gloss: 0.85 },
 ] as const;
 
 interface Slot {
@@ -36,6 +36,7 @@ export class FoodPool {
     this.mats = STYLE.map((s) => {
       const m = new StandardMaterial();
       m.diffuse = s.color;
+      m.ambient = s.color;
       m.emissive = s.color;
       m.emissiveIntensity = s.emissive;
       m.specular = new Color(1, 1, 1);
@@ -86,8 +87,9 @@ export class FoodPool {
       const bz = simToSceneZ(f.y) + Math.cos(time * 1.3 + f.seed * 1.7) * 0.1;
       const by = 0.12 * Math.sin(time * 0.9 + f.seed * 2.3);
       e.setPosition(bx, by, bz);
-      // Еда крупнее, чем радиус коллизии: в кадре она должна читаться формой.
-      const r = simLen(FOOD_DEFS[f.type].radius) * 1.6;
+      // Мелкая еда крупнее радиуса коллизии, чтобы читалась формой;
+      // ДНК-сгусток, наоборот, не должен спорить размером с самим существом.
+      const r = simLen(FOOD_DEFS[f.type].radius) * (f.type === 2 ? 0.85 : 1.6);
       const pulse = f.type === 2 ? 1 + 0.12 * Math.sin(TAU * 2 * time + f.seed) : 1;
       const d = r * 2 * pulse;
       e.setLocalScale(d, d * (f.type === 1 ? 0.8 : 1), d);

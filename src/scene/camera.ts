@@ -11,7 +11,7 @@ import { sceneToSimX, sceneToSimY, simToSceneX, simToSceneZ } from './units';
 const PITCH_DEG = -84;
 const FOV_DEG = 40;
 /** Дистанция до плоскости геймплея: существо занимает заметную долю экрана. */
-export const CAM_DIST = 30;
+export const CAM_DIST = 19;
 
 export class FollowCamera {
   readonly rig = new Entity('CameraRig');
